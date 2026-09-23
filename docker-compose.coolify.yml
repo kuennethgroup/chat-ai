@@ -1,0 +1,72 @@
+# Coolify-friendly compose for gwdg/chat-ai
+# - no host networking / bind mounts (Coolify's Traefik routes to the containers)
+# - config JSON files are generated at startup from env vars set in Coolify's UI
+services:
+  back:
+    build: ./back
+    expose:
+      - "8081"
+    environment:
+      - API_ENDPOINT=${API_ENDPOINT}          # e.g. https://llm.example.com/v1
+      - API_KEY=${API_KEY}
+      - SERVICE_NAME=${SERVICE_NAME:-Chat AI}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /run/secrets
+        node -e '
+          const e = process.env;
+          require("fs").writeFileSync("/run/secrets/back", JSON.stringify({
+            port: 8081,
+            apiEndpoint: e.API_ENDPOINT,
+            apiKey: e.API_KEY,
+            serviceName: e.SERVICE_NAME
+          }, null, 2));
+        '
+        exec npm start
+    restart: unless-stopped
+
+  front:
+    build: ./front
+    expose:
+      - "8080"
+    environment:
+      - BACKEND_URL=${BACKEND_URL}            # public URL of the back service, e.g. https://chat-api.example.com
+      - FRONT_HOST=${FRONT_HOST}              # hostname only, e.g. chat.example.com
+      - MODEL_ID=${MODEL_ID}                  # exact id from GET <endpoint>/v1/models
+      - MODEL_NAME=${MODEL_NAME:-Qwen}
+      - SYSTEM_PROMPT=${SYSTEM_PROMPT:-You are a helpful assistant}
+      - ANNOUNCEMENT=${ANNOUNCEMENT:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /run/secrets
+        export __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="$${FRONT_HOST}"
+        node -e '
+          const e = process.env;
+          let b = e.BACKEND_URL || "";
+          if (b.endsWith("/")) b = b.slice(0, -1);
+          const m = e.MODEL_ID;
+          require("fs").writeFileSync("/run/secrets/front", JSON.stringify({
+            mode: "prod",
+            port: 8080,
+            backendPath: b,
+            modelsPath: b + "/models",
+            userDataPath: b + "/user",
+            proposalGenerationModel: m,
+            titleGenerationModel: m,
+            memoryGenerationModel: m,
+            modules: { tools: false, feedback: false, choices: false },
+            default: {
+              model: { id: m, name: e.MODEL_NAME },
+              messages: [{ role: "system", content: e.SYSTEM_PROMPT }],
+              top_p: 0.5,
+              temperature: 0.5
+            },
+            announcement: e.ANNOUNCEMENT || ""
+          }, null, 2));
+        '
+        exec /usr/src/app/entrypoint.sh
+    depends_on:
+      - back
+    restart: unless-stopped
