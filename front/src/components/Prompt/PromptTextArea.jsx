@@ -147,7 +147,6 @@ export default function PromptTextArea({
               opacity: isDragging ? 0.5 : 1
             }}
             onChange={(e) => {
-              // adjustHeight();
               handleChange(e);
             }}
             onDragOver={(e) => {e.preventDefault(); }}
@@ -155,6 +154,9 @@ export default function PromptTextArea({
             onDragLeave={(e) => {e.preventDefault(); setIsDragging(false);}}
             onDrop={handleDrop}
             onKeyDown={(event) => {
+            // Enter confirms an IME composition (Japanese, Chinese, Korean), don't send.
+            // Safari reports isComposing false on that Enter, but keyCode is still 229.
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
             if (
                 event.key === "Enter" &&
                 !event.shiftKey &&

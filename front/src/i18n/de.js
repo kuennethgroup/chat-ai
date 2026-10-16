@@ -31,6 +31,8 @@ export default {
     record_start: "Aufnehmen (klicken/halten)",
     record_stop: "Stopp (klicken/loslassen)",
     dont_show_again: "Nicht mehr anzeigen",
+    regenerate: "Antwort neu generieren",
+    fork: "In neuem Chat fortfahren",
     backup_data: "Daten sichern",
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
@@ -112,9 +114,13 @@ export default {
             label: "An",
             description: "Reasoning ist aktiviert"
         },
+        minimal: {
+            label: "Minimal",
+            description: "Minimaler Reasoning-Aufwand",
+          },
         low: {
             label: "Niedrig",
-            description: "Minimaler Reasoning-Aufwand"
+            description: "Niedriger Reasoning-Aufwand"
         },
         medium: {
             label: "Mittel",
@@ -125,7 +131,7 @@ export default {
             description: "Hoher Reasoning-Aufwand"
         },
         xhigh: {
-            label: "Hoch",
+            label: "Hoch‌+",
             description: "Hoher Reasoning-Aufwand"
         },
         max: {
@@ -187,6 +193,9 @@ export default {
     references: "Referenzen",
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
+    fork_empty: "Keine Nachrichten zum Kopieren gefunden.",
+    fork_created: "Neue Unterhaltung erstellt.",
+    fork_failed: "Unterhaltung konnte nicht kopiert werden.",
     untitled: "Unbenannter Chat",
   },
   // Footer
@@ -424,6 +433,10 @@ export default {
     change_model: "Modell wechseln",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
+    scope_filter: "Modelle filtern",
+    scope_all: "Alle Modelle",
+    scope_internal: "Nur interne",
+    scope_external: "Nur externe",
   },
   // Tour
   tour: {
@@ -467,8 +480,11 @@ export default {
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     regenerate_confirm:
-      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
+    fork_confirm:
+      "Die Unterhaltung wird bis zu dieser Nachricht in einen neuen Chat kopiert. Die aktuelle Unterhaltung bleibt unverändert, Sie können also eine andere Antwort oder andere Einstellungen ausprobieren, ohne etwas zu verlieren.",
+    fork_yes: "Kopie erstellen",
     regenerate_fork: "Kopie",
     regenerate_fork_success: "Chat erfolgreich geforkt",
     regenerate_fork_fail: "Chat konnte nicht geforkt werden.",

@@ -3,8 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import DOMPurify from "dompurify";
 
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
@@ -181,19 +179,35 @@ const preprocessLaTeX = (content) => {
     }
   );
 
+  // Inline $...$ follows pandoc's tex_math_dollars rule (as markdown-it-katex
+  // does): the opening $ needs a non-space on its right, the next unescaped $
+  // closes only with a non-space on its left and no digit on its right, and
+  // the region may not cross a blank line. So "$3g=90$" is math, while
+  // "$20,000 and $30,000" is not. Escape pairs like "\$" or "\\" are consumed
+  // as a unit, so an escaped character never acts as a delimiter. Every other
+  // single $ is escaped, so remark-math, which pairs dollars by different
+  // rules, cannot turn it into a delimiter.
   const latexExpressions = [];
   processedContent = processedContent.replace(
-    /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
+    /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\[\s\S]|\$\$|\$(?=[^\s$])(?:\\[\s\S]|[^\\$\n]|\n(?![ \t]*\n))*(?:\\\S|[^\\$\s])\$(?!\d)|\$/g,
     (match) => {
+      if (match === "$") return "\\$";
+      if (match === "$$" || (match.length === 2 && match[0] === "\\")) {
+        return match;
+      }
       latexExpressions.push(match);
       return `<<LATEX_${latexExpressions.length - 1}>>`;
     }
   );
 
-  processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
-
   processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
-    return latexExpressions[parseInt(i)];
+    // Convert \[...\] and \(...\) to the $$/$ delimiters remark-math expects
+    // here, on the matched math only, so code blocks and math bodies (e.g.
+    // the "\\[4pt]" row separator) are never rewritten.
+    const latex = latexExpressions[parseInt(i)];
+    if (latex.startsWith("\\[")) return `$$${latex.slice(2, -2)}$$`;
+    if (latex.startsWith("\\(")) return `$${latex.slice(2, -2)}$`;
+    return latex;
   });
 
   processedContent = processedContent.replace(
@@ -202,12 +216,6 @@ const preprocessLaTeX = (content) => {
       return codeBlocks[parseInt(i)];
     }
   );
-
-  processedContent = processedContent
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$");
 
   return processedContent;
 };
@@ -392,77 +400,14 @@ export const SafeMarkdown = ({
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
-  // const preClean = (text) =>
-  //   text
-  //     .replace(/\[\[([^\|\]]+)\|([^\]]+)\]\]/g, "[$2]($1)")
-  //     .replace(/^\s*={2,6}\s*(.*?)\s*={2,6}\s*$/gm, (m, t) => {
-  //       const eqs = (m.match(/=/g) || []).length / 2;
-  //       const level = Math.min(6, Math.max(1, 7 - eqs));
-  //       return `${"#".repeat(level)} ${t}`;
-  //     })
-  //     .replace(/^\s*undefined\s*$/gm, "")
-  //     .replace(/,\s*\[object Object\]\s*,?/g, " ")
-  //     .replace(/\[object Object\]/g, "")
-  //     .replace(/(^|,)\s*,+/g, "$1");
-
   try {
-    const cleanContent = useMemo(() => {
-      return DOMPurify.sanitize(markdownContent, {
-        // FORBID_TAGS: [
-        //   "script",
-        //   "style",
-        //   "link",
-        //   "meta",
-        //   "title",
-        //   "head",
-        //   "html",
-        //   "body",
-        //   "object",
-        //   "embed",
-        //   "form",
-        //   "input",
-        //   "button",
-        //   "textarea",
-        //   "select",
-        //   "option",
-        //   "iframe",
-        //   "frame",
-        //   "frameset",
-        //   "base",
-        // ],
-        // FORBID_ATTR: [
-        //   "style",
-        //   "onerror",
-        //   "onload",
-        //   "onclick",
-        //   "onmouseover",
-        //   "onfocus",
-        //   "onblur",
-        //   "onchange",
-        //   "onsubmit",
-        //   "onkeydown",
-        //   "onkeyup",
-        //   "onmousedown",
-        //   "onmouseup",
-        //   "onmousemove",
-        //   "onmouseout",
-        //   "onmouseover",
-        // ],
-        ALLOWED_TAGS: ['p','pre','code','strong','em','ul','li','ol','a','blockquote','h1','h2','h3','h4'],
-        ALLOWED_ATTR: ['href','title','class'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false,
-        SANITIZE_DOM: true,
-        KEEP_CONTENT: true,
-        ALLOWED_URI_REGEXP:
-          /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      });
-    }, [markdownContent]);
+    // Raw HTML is inert here because rehype-raw is deliberately not enabled:
+    // react-markdown drops html nodes it cannot turn into components. Do not add
+    // rehype-raw without a sanitizer — see remarkHtmlAsText in ThinkingBlock.jsx.
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
 
     const rehypePlugins = [];
-    // if (allowRawHtml) rehypePlugins.push(rehypeRaw);
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
@@ -502,8 +447,6 @@ const MarkdownRenderer = memo(
       const style = document.createElement("style");
       style.textContent = `
       .katex-display {
-        display: flex !important;
-        justify-content: center !important;
         text-align: center !important;
         margin: 1em 0 !important;
       }
@@ -620,8 +563,8 @@ const MarkdownRenderer = memo(
       return isLoading ? referencesContent : processedReferences;
     }, [isLoading, referencesContent, processedReferences]);
 
-    const renderContentByMode = () => {
-      const contentToRender = mainContent.trim();
+    const renderContentByMode = useCallback((content) => {
+      const contentToRender = content.trim();
 
       switch (renderMode) {
         case "Plaintext":
@@ -636,7 +579,6 @@ const MarkdownRenderer = memo(
             <SafeMarkdown
               enableKatex={true}
               components={{
-                // ...rendererComponents,
                 // Remove markdown rendering for components
                 h1: ({ children }) => <>{children}</>,
                 h2: ({ children }) => <>{children}</>,
@@ -673,7 +615,7 @@ const MarkdownRenderer = memo(
           );
 
         default:
-          // Default = Markdown + KaTeX + sanitized HTML
+          // Default = Markdown + KaTeX, raw HTML inert (no rehype-raw)
           return (
             <SafeMarkdown
               enableKatex={true}
@@ -683,7 +625,7 @@ const MarkdownRenderer = memo(
             </SafeMarkdown>
           );
       }
-    };
+    }, [renderMode]);
 
     if (!children) return null;
 
@@ -698,12 +640,16 @@ const MarkdownRenderer = memo(
                 index === thinkingBlocks.length - 1
               }
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
+              // Default keeps the block's own rendering, other modes follow the switch
+              renderContent={
+                renderMode === "Default" ? undefined : renderContentByMode
+              }
             >
               {content}
             </ThinkingBlock>
           ))}
 
-          {renderContentByMode()}
+          {renderContentByMode(mainContent)}
         </div>
 
         {finalReferences && (

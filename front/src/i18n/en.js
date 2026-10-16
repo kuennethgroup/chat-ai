@@ -31,6 +31,8 @@ export default {
     record_start: "Record (click/hold)",
     record_stop: "Stop (click/release)",
     dont_show_again: "Don't show this again",
+    regenerate: "Regenerate response",
+    fork: "Continue in a new chat",
     backup_data: "Backup Data",
     skip_backup: "Skip Backup",
     upgrade_chat_ai: "Upgrade Chat AI",
@@ -112,9 +114,13 @@ export default {
             label: "On",
             description: "Reasoning is switched on",
           },
+          minimal: {
+            label: "Minimal",
+            description: "Minimal reasoning effort",
+          },
           low: {
             label: "Low",
-            description: "Minimal reasoning effort",
+            description: "Low reasoning effort",
           },
           medium: {
             label: "Medium",
@@ -127,7 +133,7 @@ export default {
               "High reasoning effort",
           },
           xhigh: {
-            label: "High",
+            label: "High+",
             description:
               "High reasoning effort",
           },
@@ -190,6 +196,9 @@ export default {
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
+    fork_empty: "No messages found to copy.",
+    fork_created: "New conversation created.",
+    fork_failed: "Conversation could not be copied.",
     untitled: "Untitled Chat",
   },
   // Footer
@@ -422,6 +431,10 @@ export default {
     change_model: "Change model",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
+    scope_filter: "Filter models",
+    scope_all: "All models",
+    scope_internal: "Internal only",
+    scope_external: "External only",
   },
   // Tour
   tour: {
@@ -466,8 +479,11 @@ export default {
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
     regenerate_confirm:
-      "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
+      "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
+    fork_confirm:
+      "This copies the conversation up to this message into a new chat. The current conversation stays as it is, so you can try a different answer or different settings without losing anything.",
+    fork_yes: "Create copy",
     regenerate_fork: "Fork",
     regenerate_fork_success: "Chat forked successfully",
     regenerate_fork_fail: "Chat could not be forked",
