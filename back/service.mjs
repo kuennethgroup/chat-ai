@@ -145,7 +145,20 @@ app.get("/models", async (req, res) => {
       headers.Authorization = "Bearer " + inference_id;
     }
     const response = await fetch(url, { method: "GET", headers });
-    res.status(200).json(await response.json());
+    const result = await response.json();
+    // OpenAI-compatible servers (vLLM, Ollama, ...) omit the extra fields
+    // Chat AI uses for display; fill in defaults where they are missing
+    if (Array.isArray(result?.data)) {
+      result.data = result.data.map((m) => ({
+        ...m,
+        name: m.name ?? m.id,
+        status: m.status ?? "ready",
+        demand: m.demand ?? 0,
+        input: m.input ?? ["text"],
+        output: m.output ?? ["text"],
+      }));
+    }
+    res.status(200).json(result);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
