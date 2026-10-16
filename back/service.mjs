@@ -352,8 +352,10 @@ app.post("/chat/completions", async (req, res) => {
 
     // Pass through headers (optional but recommended)
     res.status(response.status);
+    // fetch() already decompressed the body, so don't forward encoding/length headers
+    const skip = ["content-encoding", "content-length", "transfer-encoding", "connection", "keep-alive"];
     response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
+      if (!skip.includes(key.toLowerCase())) res.setHeader(key, value);
     });
 
     // Stream with error handling
